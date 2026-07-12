@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>ЧМ-2026 · Поездка</title>
+<style>
+  :root {
+    --bg: #FAFAF7;
+    --surface: #FFFFFF;
+    --surface-alt: #F4F1EC;
+    --text: #0B2545;
+    --muted: #6B7280;
+    --accent: #13759E;
+    --gold: #C99A2E;
+    --danger: #B91C1C;
+    --success: #047857;
+    --border: #E5E7EB;
+    --hot-bg: #FEF2F2;
+    --hot-border: #FECACA;
+    --warn-bg: #FEF3C7;
+    --warn-text: #92400E;
+    --done-bg: #ECFDF5;
+    --info-bg: #EFF6FF;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0F1419;
+      --surface: #1A2027;
+      --surface-alt: #232B36;
+      --text: #E5E7EB;
+      --muted: #9CA3AF;
+      --accent: #60A5FA;
+      --gold: #FBBF24;
+      --danger: #F87171;
+      --success: #34D399;
+      --border: #2D3640;
+      --hot-bg: #450A0A;
+      --hot-border: #7F1D1D;
+      --warn-bg: #422006;
+      --warn-text: #FCD34D;
+      --done-bg: #064E3B;
+      --info-bg: #172554;
+    }
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    padding-bottom: 80px;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 12px 14px 20px; }
+
+  header {
+    background: var(--surface);
+    border-radius: 14px;
+    padding: 14px 16px 12px;
+    border: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  h1 { font-size: 19px; margin: 0 0 2px; font-weight: 700; letter-spacing: -0.01em; }
+  .sub { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+  .progress { height: 6px; background: var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 4px; }
+  .bar { height: 100%; background: linear-gradient(90deg, var(--accent), var(--gold)); transition: width 0.4s ease; width: 0; }
+  .progress-label { font-size: 11px; color: var(--muted); display: flex; justify-content: space-between; }
+
+  .tabs {
+    position: sticky; top: 0; z-index: 50; display: flex; background: var(--bg);
+    padding: 8px 0; margin: 0 -14px 12px; padding-left: 14px; padding-right: 14px;
+    overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; border-bottom: 1px solid var(--border);
+  }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    flex: 0 0 auto; padding: 8px 14px; font-size: 13px; font-weight: 500; color: var(--muted);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px; cursor: pointer;
+    margin-right: 6px; white-space: nowrap; font-family: inherit; transition: all 0.15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .tab.active { background: var(--accent); color: white; border-color: var(--accent); }
+  .tab .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--danger); display: none; }
+  .tab.has-hot .dot { display: inline-block; }
+  .tab.active .dot { background: white; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .actions { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
+  .btn { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 6px 12px; font-size: 11px; cursor: pointer; font-family: inherit; font-weight: 500; }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+  .section { background: var(--surface); border-radius: 12px; border: 1px solid var(--border); margin-bottom: 10px; overflow: hidden; }
+  .section.hot { border-color: var(--hot-border); }
+  .section.done { opacity: 0.65; }
+  .sec-head { padding: 12px 14px; cursor: pointer; user-select: none; display: flex; align-items: center; gap: 10px; }
+  .sec-head:hover { background: var(--bg); }
+  .sec-icon { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+  .section.hot .sec-icon { background: var(--danger); }
+  .section.done .sec-icon { background: var(--success); }
+  .sec-title { flex: 1; font-size: 14px; font-weight: 600; }
+  .sec-time { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .sec-count { background: var(--bg); padding: 2px 8px; border-radius: 10px; font-size: 11px; font-variant-numeric: tabular-nums; margin-right: 6px; }
+  .section.done .sec-count { background: var(--done-bg); color: var(--success); }
+  .chevron { width: 14px; height: 14px; transition: transform 0.2s; color: var(--muted); flex-shrink: 0; }
+  .section.collapsed .chevron { transform: rotate(-90deg); }
+  .section.collapsed .sec-body { display: none; }
+  .sec-body { padding: 0 14px 8px; border-top: 1px solid var(--border); padding-top: 4px; }
+
+  .item { display: flex; align-items: flex-start; gap: 10px; padding: 9px 4px; border-bottom: 1px solid var(--border); }
+  .item:last-child { border-bottom: none; }
+  .item.checked { opacity: 0.55; }
+  .item.checked .item-text { text-decoration: line-through; }
+  .check { flex-shrink: 0; width: 20px; height: 20px; border: 1.5px solid var(--border); border-radius: 5px; margin-top: 1px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; background: transparent; }
+  .check:hover { border-color: var(--accent); }
+  .item.checked .check { background: var(--success); border-color: var(--success); }
+  .check svg { width: 12px; height: 12px; stroke: white; stroke-width: 3; fill: none; opacity: 0; }
+  .item.checked .check svg { opacity: 1; }
+  .item-content { flex: 1; min-width: 0; }
+  .item-text { font-size: 13px; line-height: 1.4; }
+  .item-note { font-size: 11.5px; color: var(--muted); margin-top: 3px; line-height: 1.4; }
+  .item-note a { color: var(--accent); text-decoration: none; }
+  .item-note a:hover { text-decoration: underline; }
+  .badge { display: inline-block; font-size: 9px; padding: 1px 5px; border-radius: 4px; margin-left: 4px; font-weight: 700; letter-spacing: 0.04em; vertical-align: 1px; }
+  .badge.hot { background: var(--hot-bg); color: var(--danger); }
+  .badge.warn { background: var(--warn-bg); color: var(--warn-text); }
+
+  .timeline { position: relative; padding-left: 20px; }
+  .timeline::before { content: ''; position: absolute; left: 6px; top: 8px; bottom: 8px; width: 2px; background: var(--border); }
+  .tl-item { position: relative; margin-bottom: 14px; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+  .tl-item::before { content: ''; position: absolute; left: -20px; top: 16px; width: 12px; height: 12px; border-radius: 50%; background: var(--surface); border: 2px solid var(--accent); }
+  .tl-item.hot::before { border-color: var(--danger); }
+  .tl-item.flight::before { border-color: var(--gold); background: var(--gold); }
+  .tl-item.tbd::before { border-color: var(--muted); border-style: dashed; }
+  .tl-day { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; margin-bottom: 4px; }
+  .tl-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+  .tl-time { font-size: 12px; color: var(--accent); font-weight: 500; font-variant-numeric: tabular-nums; margin-bottom: 6px; }
+  .tl-desc { font-size: 12.5px; color: var(--muted); line-height: 1.65; }
+  .tl-desc a { color: var(--accent); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 2px; font-weight: 500; cursor: pointer; display: inline-block; padding: 2px 1px; min-height: 24px; line-height: 1.4; position: relative; z-index: 2; }
+  .tl-desc a:active { opacity: 0.6; }
+  .tl-desc b { color: var(--text); font-weight: 600; }
+  .tl-meta { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 6px; }
+  .meta-chip { font-size: 10px; padding: 3px 8px; background: var(--bg); border-radius: 6px; color: var(--muted); font-weight: 500; }
+  .meta-chip.code { font-family: ui-monospace, "SF Mono", Menlo, monospace; color: var(--accent); }
+  .meta-chip.warn { background: var(--warn-bg); color: var(--warn-text); }
+
+  .contact-group { margin-bottom: 16px; }
+  .group-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; margin: 0 0 8px 4px; }
+  .contact-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; gap: 10px; text-decoration: none; color: var(--text); transition: all 0.15s; }
+  .contact-card:hover { border-color: var(--accent); }
+  .contact-card.hot { border-color: var(--hot-border); background: var(--hot-bg); }
+  .contact-card.hot:hover { border-color: var(--danger); }
+  .c-info { flex: 1; min-width: 0; }
+  .c-name { font-size: 13px; font-weight: 600; line-height: 1.3; }
+  .c-detail { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .c-action { font-size: 11px; padding: 5px 10px; background: var(--accent); color: white; border-radius: 6px; font-weight: 500; flex-shrink: 0; }
+  .contact-card.hot .c-action { background: var(--danger); }
+
+  .doc-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+  .doc-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  .doc-name { font-size: 14px; font-weight: 700; }
+  .doc-tag { font-size: 10px; padding: 3px 8px; background: var(--info-bg); color: var(--accent); border-radius: 6px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
+  .doc-tag.warn { background: var(--warn-bg); color: var(--warn-text); }
+  .doc-row { display: flex; justify-content: space-between; padding: 5px 0; font-size: 12px; gap: 12px; }
+  .doc-row .k { color: var(--muted); flex-shrink: 0; }
+  .doc-row .v { text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; word-break: break-all; }
+  .doc-row .v.mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+  .doc-row.warn .v { color: var(--warn-text); }
+  .doc-row.danger .v { color: var(--danger); }
+  .doc-row.success .v { color: var(--success); }
+
+  .budget-hero { background: linear-gradient(135deg, var(--surface), var(--surface-alt)); border: 1px solid var(--border); border-radius: 14px; padding: 16px; margin-bottom: 12px; }
+  .budget-hero-title { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 8px; font-weight: 600; }
+  .budget-hero-amount { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; color: var(--text); font-variant-numeric: tabular-nums; }
+  .budget-hero-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+  .budget-hero-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+  .budget-stat { background: var(--bg); border-radius: 10px; padding: 10px 12px; }
+  .budget-stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+  .budget-stat-value { font-size: 18px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .budget-stat-value.accent { color: var(--accent); }
+  .budget-stat-value.success { color: var(--success); }
+  .budget-stat-value.danger { color: var(--danger); }
+  .budget-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin-bottom: 10px; }
+  .budget-card-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .budget-card-total { font-variant-numeric: tabular-nums; color: var(--accent); }
+  .budget-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; gap: 12px; }
+  .budget-row:last-child { border-bottom: none; }
+  .budget-row .label { color: var(--text); flex: 1; }
+  .budget-row .label-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .budget-row .value { font-weight: 600; font-variant-numeric: tabular-nums; color: var(--text); text-align: right; white-space: nowrap; }
+  .budget-row .value-sub { font-size: 11px; color: var(--muted); font-weight: 400; margin-top: 2px; }
+  .budget-row.subtotal { border-top: 2px solid var(--border); border-bottom: none; padding-top: 10px; margin-top: 4px; }
+  .budget-row.subtotal .label { font-weight: 700; }
+  .budget-row.subtotal .value { color: var(--accent); }
+  .progress-bar { height: 6px; background: var(--border); border-radius: 6px; overflow: hidden; margin: 6px 0 0; }
+  .progress-fill { height: 100%; background: var(--accent); transition: width 0.4s; }
+  .progress-fill.warn { background: var(--gold); }
+  .progress-fill.danger { background: var(--danger); }
+  .budget-note { background: var(--bg); border-left: 3px solid var(--gold); padding: 10px 12px; border-radius: 6px; font-size: 12px; color: var(--text); line-height: 1.5; margin-top: 10px; }
+  .budget-note.danger { border-left-color: var(--danger); }
+  .budget-note.success { border-left-color: var(--success); }
+  .budget-note b { color: var(--text); }
+
+  footer { text-align: center; font-size: 11px; color: var(--muted); padding: 14px 0 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <h1>ЧМ-2026 · 13–27 июля</h1>
+    <div class="sub">Чеботок Георгий · Москва → Атланта → Майами → Нью-Йорк → Вашингтон</div>
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <div class="progress-label">
+      <span id="progress-text">0 из 0</span>
+      <span id="percent">0%</span>
+    </div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="plan">📍 План</button>
+    <button class="tab has-hot" data-tab="checklist">✓ Чек-лист<span class="dot"></span></button>
+    <button class="tab" data-tab="budget">💰 Бюджет</button>
+    <button class="tab" data-tab="contacts">📞 Контакты</button>
+    <button class="tab" data-tab="docs">🛂 Документы</button>
+  </div>
+
+  <div class="panel active" id="panel-plan">
+    <div class="timeline" id="timeline"></div>
+  </div>
+
+  <div class="panel" id="panel-checklist">
+    <div class="actions">
+      <button class="btn" onclick="toggleAll(true)">Свернуть все</button>
+      <button class="btn" onclick="toggleAll(false)">Развернуть все</button>
+      <button class="btn" onclick="jumpToCurrent()">К текущему</button>
+      <button class="btn danger" onclick="resetAll()">Сбросить</button>
+    </div>
+    <div id="sections"></div>
+  </div>
+
+  <div class="panel" id="panel-budget">
+    <div id="budget"></div>
+  </div>
+
+  <div class="panel" id="panel-contacts">
+    <div id="contacts"></div>
+  </div>
+
+  <div class="panel" id="panel-docs">
+    <div id="docs"></div>
+  </div>
+
+  <footer>Состояние чек-листа сохраняется в этом браузере. Маршрут: сценарий A подтверждён.</footer>
+</div>
+
+<script>
+const checkSvg = '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+
+const SECTIONS = [
+  {
+    id: 'tickets', title: '🎟️ Билеты на матчи', time: 'Полуфинал — покупка после 11.07', hot: true,
+    items: [
+      { id: 't1', text: 'Матч за 3-е место (Майами, 18.07) — куплен', note: 'Hard Rock Stadium, 17:00 ET. Подарок, без затрат из бюджета поездки' },
+      { id: 't2', text: 'Полуфинал (Атланта, 15.07) — куплен и оплачен', note: 'M102 Winner 99 vs Winner 100. Блок 322, ряд 17, 1 билет. № 10010428183. 345 240 ₽ (~$4 210). Доплата внесена, оплата закрыта. Активировать в FWC2026 Mobile Tickets App заранее' },
+      { id: 't3', text: 'Финал (Нью-Йорк, 19.07) — без билета', note: 'Смотрим в баре в городе, план бара — позже' },
+    ],
+  },
+  {
+    id: 'flights', title: '✈️ Перелёты и поезд', time: 'Маршрут подтверждён — покупать всё сейчас', hot: true,
+    items: [
+      { id: 'f1', text: 'Москва → Атланта, Turkish Airlines — куплено', note: 'VKO 14.07 00:30 → IST 04:30 (TK-412) → пересадка 3ч35м → ATL 13:00 (TK-131, выл. 08:05). 106 401 ₽. Бронь SSM3WB, эл. билет 2355892672022. Ручная кладь 1×8кг 55×40×23см на пассажира' },
+      { id: 'f2', text: 'Атланта → Майами, Frontier — куплено', note: 'F9-3442, 16.07, 20:55 ATL → 23:05 MIA. Бронь/эл.билет FIWTFQ. 10 502.72 ₽. Тариф: ТОЛЬКО личная вещь 45×20×35 см, без ручной клади и багажа' },
+      { id: 'f3', text: 'FLL → JFK, jetBlue — куплено', note: 'B6-1902, 18.07 22:15 → 19.07 01:18. Бронь KHDPMM, заказ 2563210241. Blue Basic: личная вещь 43×33×20 см, ручная кладь не включена' },
+      { id: 'f4', text: 'Нью-Йорк → Вашингтон, Amtrak Acela', note: '24.07 утром, ~08:00-08:30 → ~11:15-11:30. Встреча с партнёром 12:00-13:00. Купить на amtrak.com, рейс с отправлением 06:35-08:00 даёт наибольший запас', badge: 'hot' },
+      { id: 'f5', text: 'Вашингтон → Москва, Turkish Airlines — куплено', note: 'TK 188, IAD 28.07 13:20 → IST 29.07 06:10, пересадка 1ч05м, TK 413 IST 07:15 → VKO 11:05. 80 306 ₽' },
+      { id: 'f7', text: 'Арендовать машину в Вашингтоне на 26-27.07', note: 'Для поездки в Great Falls Park (26.07) и Shenandoah National Park (27.07). Нужны водительские права + МВУ (см. раздел "Сборы"). Оценка $150-200 за 2 дня', badge: 'hot' },
+    ],
+  },
+  {
+    id: 'dmitry', title: '👤 Задачи Дмитрия (ассистент)', time: 'Жильё во всех городах + билет домой', hot: true,
+    items: [
+      { id: 'd1', text: 'Отель в Атланте — ЗАБРОНИРОВАН', note: '300 Peachtree Street NE, Unit 24L, Атланта. 76 599 ¥ (~$474), 14–16.07, 2 ночи. Готово, действие не требуется' },
+      { id: 'd2', text: 'Отель в Майами / Aventura — ЗАБРОНИРОВАН', note: 'Оплачено $442.85, 16–18.07, 2 ночи. Готово, действие не требуется' },
+      { id: 'd3', text: 'Отель в Нью-Йорке — НЕ НУЖЕН', note: 'Георгий остановится у знакомого на 113-й улице, Манхэттен. Бронирование не требуется, задача закрыта' },
+      { id: 'd4', text: 'Отель в Вашингтоне, 24–28.07, 4 ночи — ГОТОВ К БРОНИРОВАНИЮ', note: 'Встреча с партнёром 24.07 в 14:00 по адресу 3350 M Street NW, Washington, DC 20007 (Джорджтаун). Район поиска: Джорджтаун или Foggy Bottom / West End — удобно и для встречи, и для поездок на машине в Great Falls Park (26.07) и Shenandoah (27.07). Заезд 24.07 днём (после прилёта поездом в 12:30-13:00, до встречи в 14:00 заселиться не успеть — оставить багаж на ресепшене), выезд 28.07 (вылет из IAD в 13:20, время на возврат машины и сборы утром). Бюджет: ~$175/ночь, итого ~$700. Один гость.', badge: 'hot' },
+      { id: 'd5', text: 'Билет Вашингтон → Москва — КУПЛЕН', note: 'TK188/TK413 через Стамбул, 28.07 13:20 → 29.07 11:05. 80 306 ₽. Готово, действие не требуется' },
+      { id: 'd6', text: 'Забронировать аренду авто в Вашингтоне на 26-27.07', note: 'Эконом-класс, 2 дня. Заберёт сам Георгий (нужны водительские права + МВУ). Оценка $150-200 без учёта бензина/страховки' },
+    ],
+  },
+  {
+    id: 'prep', title: '🎒 Сборы и документы', time: 'Сделать до отъезда', hot: true,
+    items: [
+      { id: 'p1', text: 'Перевести водительские права на английский / оформить международные — КРИТИЧНО', note: 'Нужны для аренды авто в Вашингтоне 26-27.07 (поездка в Great Falls Park и Shenandoah National Park). Без МВУ прокатные компании (Hertz, Avis, Enterprise) в большинстве случаев не выдадут машину', badge: 'hot' },
+      { id: 'p2', text: 'Купить рюкзак под габариты ручной клади', note: 'Рекомендация: не более 40×28×18-20 см (Nomatic McKinnon 20L или Peak Design Everyday 20L) — вписывается в лимиты Frontier (45×20×35, небольшая сумка) и jetBlue Blue Basic (43×33×20, личная вещь). На Turkish Airlines пройдёт как полноценная ручная кладь', badge: 'hot' },
+      { id: 'p3', text: 'Оформить страховку на поездку', note: 'Покрытие на весь период 13-27.07, США — дорогая медицина, минимум $50-100k покрытия' },
+      { id: 'p4', text: 'Купить пауэрбанк', note: 'Разрешённая ёмкость для ручной клади — до 100 Wh без ограничений (стандартно ~20000 mAh), в багаж запрещено' },
+    ],
+  },
+  {
+    id: 'atlanta', title: 'Атланта · 14–16.07', time: 'Полуфинал 15.07, 15:00 ET', hot: true,
+    items: [
+      { id: 'a1', text: 'Отель Атланта — забронирован', note: '300 Peachtree Street NE, Unit 24L, Атланта, Джорджия 30308. Оплачено 76 599 ¥ (~$474 по курсу 161.7 ¥/$), 2 ночи 14–16.07' },
+      { id: 'a2', text: 'MARTA или Uber из аэропорта в день прилёта', note: '~15-20 мин' },
+      { id: 'a3', text: 'Georgia Aquarium — билеты онлайн заранее', note: '16.07, $45-70' },
+      { id: 'a4', text: 'Трансфер к стадиону 15.07 — заложить 60-90 мин до кикоффа', note: 'Fan-зона у Mercedes-Benz Stadium' },
+      { id: 'a5', text: 'Выезд в аэропорт 16.07 — буфер 30 мин на MARTA/Uber', note: 'Вылет 20:55' },
+    ],
+  },
+  {
+    id: 'miami', title: 'Майами/Aventura · 16–18.07', time: 'Матч за 3-е место 18.07, 17:00 ET', hot: true,
+    items: [
+      { id: 'm1', text: 'Отель в Aventura — забронирован', note: 'Оплачено $442.85 (Bybit Card). 2 ночи, 16–18.07. <a href="https://maps.app.goo.gl/t2AFPxp8QGccfjGe7">Точка на карте</a> — точный адрес уточняется' },
+      { id: 'm2', text: 'South Beach + Wynwood Walls — свободный день 17.07', note: 'Wynwood Walls $12 вход' },
+      { id: 'm3', text: 'Заказать трансфер стадион → FLL заранее на 18.07 вечер', note: 'КРИТИЧНО: после матча плотный трафик. Уйти со стадиона за 10-15 мин до конца, буфер 90 минут на 30-минутную дорогу', badge: 'hot' },
+      { id: 'm4', text: 'Выселение из отеля утром 18.07 — багаж с собой (рейс поздно вечером)', note: 'Нет камеры хранения в плане — взять с собой на весь день' },
+    ],
+  },
+  {
+    id: 'nyc-dc', title: 'Нью-Йорк + Вашингтон', time: '19–26.07 · маршрут подтверждён', hot: true,
+    items: [
+      { id: 'n1', text: 'Жильё в Нью-Йорке — у знакомого, 113-я улица, Манхэттен', note: '$200/ночь × 5 ночей = $1 000, оплата наличными. Нужно иметь при себе $1 000 кэшем к 19.07', badge: 'hot' },
+      { id: 'n3', text: 'Забронировать жильё в Вашингтоне, 2 ночи', note: '24–26.07' },
+      { id: 'n4', text: 'Купить билет на Amtrak Acela на 24.07, ~09:35-10:00', note: 'Встреча с партнёром в 14:00 — Джорджтаун, 3350 M Street NW. Купить на amtrak.com', badge: 'hot' },
+      { id: 'n5', text: 'Адрес встречи получен', note: '3350 M Street NW, Washington, DC 20007. Метро туда не идёт напрямую — от Union Station на Uber, 30-45 мин' },
+      { id: 'n6', text: 'План бара для просмотра финала 19.07', note: 'Нью-Йорк, финал 15:00 ET' },
+    ],
+  },
+  {
+    id: 'budget-check', title: '💰 Контроль бюджета', time: 'Лимит 1 000 000 ₽ на всю поездку', hot: false,
+    items: [
+      { id: 'b1', text: 'Бюджет пересчитан на 1 000 000 ₽ — укладывается с запасом', note: 'Зафиксированные расходы 706 439 ₽, остаток 293 561 ₽. После всех предстоящих трат резерв ~141 000 ₽ (~$1 720)' },
+      { id: 'b2', text: 'Билет на полуфинал полностью оплачен', note: '345 240 ₽, доплата внесена' },
+      { id: 'b3', text: 'Проверить актуальный курс Bybit Card перед крупными тратами', note: 'Последний известный: 82 ₽/$' },
+    ],
+  },
+];
+
+const TIMELINE = [
+  {
+    day: 'Пн–Вт · 13–14 июля', title: 'Перелёт Москва → Атланта',
+    time: 'Turkish Airlines · куплено', flight: true,
+    desc: '<b>00:30</b> вылет из Внуково (VKO), рейс <b>TK-412</b> → <b>04:30</b> прилёт в Стамбул (новый аэропорт).<br><b>Пересадка 3ч35м.</b><br><b>08:05</b> вылет из Стамбула, рейс <b>TK-131</b> → <b>13:00</b> прилёт в Атланту (Hartsfield-Jackson, терминал N).<br>Бронь SSM3WB, эл. билет 2355892672022. Ручная кладь 1×8кг, 55×40×23см на пассажира.',
+    meta: ['106 401 ₽', 'Куплено', 'Ручная кладь 8 кг'],
+  },
+  {
+    day: 'Вт · 14 июля', title: 'Атланта — прилёт',
+    time: 'День 1',
+    desc: '<b>13:00</b> прилёт в <a href="https://maps.google.com/?q=Hartsfield-Jackson+Atlanta+International+Airport">ATL</a>.<br><b>13:30</b> MARTA до Downtown (~15 мин) или Uber.<br><b>14:15</b> заселение в отель — <a href="https://maps.google.com/?q=300+Peachtree+Street+NE+Atlanta">300 Peachtree Street NE, Unit 24L</a>.<br><b>15:00</b> обед в <a href="https://maps.google.com/?q=Ponce+City+Market+Atlanta">Ponce City Market</a>.<br><b>16:30</b> прогулка — <a href="https://maps.google.com/?q=Centennial+Olympic+Park+Atlanta">Centennial Olympic Park</a>.<br><b>19:00</b> ужин, ранний отбой после перелёта.',
+    meta: ['Отель забронирован · $474'],
+  },
+  {
+    day: 'Ср · 15 июля', title: '⚽ Полуфинал ЧМ-2026',
+    time: 'День 2 · Mercedes-Benz Stadium', hot: true,
+    desc: '<b>09:00</b> завтрак.<br><b>11:00</b> выезд к <a href="https://maps.google.com/?q=Mercedes-Benz+Stadium+Atlanta">стадиону</a>, фан-зона.<br><b>12:00–14:30</b> обед в районе стадиона, вход за 60-90 мин до кикоффа.<br><b>15:00</b> <b>кикофф полуфинала</b>.<br><b>~17:15</b> финальный свисток.<br><b>18:00</b> ужин, отдых в Downtown/Midtown.',
+    meta: ['Билет не куплен', 'После 11.07 — составы известны'],
+  },
+  {
+    day: 'Чт · 16 июля', title: 'Атланта → Майами',
+    time: 'День 3 · свободный день + перелёт', flight: true,
+    desc: '<b>09:00</b> завтрак.<br><b>10:00</b> <a href="https://maps.google.com/?q=Georgia+Aquarium">Georgia Aquarium</a>.<br><b>12:30</b> обед в Ponce City Market.<br><b>14:00</b> прогулка по <a href="https://maps.google.com/?q=Atlanta+BeltLine+Eastside+Trail">Atlanta BeltLine</a>.<br><b>16:00</b> выселение, сборы.<br><b>17:30</b> выезд в аэропорт.<br><b>20:55</b> вылет ATL → MIA, <b>Frontier F9-3442</b>, прямой (2ч10м). Только личная вещь 45×20×35 см.<br><b>23:05</b> прилёт в Майами.',
+    meta: ['10 502.72 ₽', 'Куплено · FIWTFQ', 'Только личная вещь 45×20×35'],
+  },
+  {
+    day: 'Пт · 17 июля', title: 'Майами / Aventura',
+    time: 'День 4 · свободный день',
+    desc: '<b>10:00</b> завтрак, выезд.<br><b>11:00</b> <a href="https://maps.google.com/?q=South+Beach+Miami">South Beach</a>, Ocean Drive.<br><b>14:00</b> обед на Ocean Drive.<br><b>16:00</b> <a href="https://maps.google.com/?q=Wynwood+Walls+Miami">Wynwood Walls</a>.<br><b>19:00</b> ужин в Wynwood / Design District.<br>Проживание: <a href="https://maps.google.com/?q=2910+Northeast+207th+Street+Aventura+FL+33180">2910 NE 207th St, Aventura, FL 33180</a>.',
+    meta: ['Отель забронирован · $442.85'],
+  },
+  {
+    day: 'Сб · 18 июля', title: '🥉 Матч за 3-е место + вылет в Нью-Йорк',
+    time: 'День 5 · Hard Rock Stadium', hot: true,
+    desc: '<b>10:00</b> завтрак, выселение (багаж с собой).<br><b>13:00</b> обед в районе Miami Gardens.<br><b>15:30</b> выезд к <a href="https://maps.google.com/?q=Hard+Rock+Stadium+Miami+Gardens">стадиону</a> (буфер 90 мин).<br><b>17:00</b> <b>кикофф матча за 3-е место</b>.<br><b>~18:50</b> уйти за 10-15 мин до конца — риск трафика.<br><b>19:00</b> такси/Uber до <a href="https://maps.google.com/?q=Fort+Lauderdale-Hollywood+International+Airport">FLL</a> — заказать заранее.<br><b>22:15</b> вылет FLL → JFK, <b>jetBlue B6-1902</b>.',
+    meta: ['Билет куплен', 'FLL→JFK: бронь KHDPMM', 'Риск трафика после матча'],
+  },
+  {
+    day: 'Вс · 19 июля', title: 'Прилёт в Нью-Йорк + финал ЧМ',
+    time: 'День 6 · 01:18 JFK', flight: true,
+    desc: 'Прилёт в JFK в 01:18. Финал ЧМ в этот же день, 15:00 ET, MetLife Stadium — смотрим в баре в городе (план бара не составлен).',
+    meta: ['Финал 19.07 — в баре, без билета'],
+  },
+  {
+    day: '19–24 июля', title: 'Нью-Йорк',
+    time: '5 ночей',
+    desc: 'Проживание у знакомого — 113-я улица, Манхэттен. $200/ночь × 5 ночей = $1 000, наличными. Формат пребывания (деловой/отдых) больше не блокирует план.',
+    meta: ['Жильё у знакомого · $1 000 кэш'],
+  },
+  {
+    day: 'Пт · 24 июля', title: 'Нью-Йорк → Вашингтон + встреча с партнёром',
+    time: 'Amtrak Acela · встреча 14:00', hot: true,
+    desc: '<b>09:00-09:30</b> выезд из отеля к <a href="https://maps.google.com/?q=Moynihan+Train+Hall+New+York">Moynihan Train Hall / Penn Station</a>.<br><b>~09:35-10:00</b> отправление Acela (уточнить точный рейс при покупке).<br><b>~12:30-13:00</b> прибытие на <a href="https://maps.google.com/?q=Union+Station+Washington+DC">Union Station, Washington DC</a>.<br><b>13:00-13:45</b> Uber до места встречи — Джорджтаун, метро туда не идёт напрямую.<br><b>14:00</b> встреча с партнёром — <a href="https://maps.google.com/?q=3350+M+Street+NW+Washington+DC+20007">3350 M Street NW, Washington, DC 20007</a>.',
+    meta: ['Билет Acela не куплен', '~2ч45м–3ч10м в пути'],
+  },
+  {
+    day: '24–28 июля', title: 'Вашингтон',
+    time: '4 ночи',
+    desc: 'После встречи 24.07 — расширенная программа. Отель не забронирован.',
+    meta: ['Отель не забронирован'],
+  },
+  {
+    day: 'Вс · 26 июля', title: 'Great Falls Park',
+    time: 'Половина дня',
+    desc: '<b>10:00</b> выезд на арендованной машине (~30 мин).<br><b>10:30-13:00</b> <a href="https://maps.google.com/?q=Great+Falls+Park+Virginia">Great Falls Park</a> — три смотровые площадки на пороги Потомака, лёгкие тропы. Вход $20/машина, только картой.<br><b>13:30</b> обед в Джорджтауне или Олд-Таун Александрии на обратном пути.<br>Вторая половина дня свободна.',
+    meta: ['$20 вход', '~30 мин от центра'],
+  },
+  {
+    day: 'Пн · 27 июля', title: '🏞️ Shenandoah National Park — Dark Hollow Falls',
+    time: 'Полный день · выезд рано', hot: true,
+    desc: '<b>07:00-08:00</b> выезд из Вашингтона (~2-2.5 ч в одну сторону по Skyline Drive).<br><b>~10:00</b> прибытие, миля 50.7 Skyline Drive.<br><b>Тропа Dark Hollow Falls</b> — 2.2 км туда-обратно, набор высоты ~135 м, 1-1.5 часа. Водопад 21 м, самый популярный в парке.<br>Вход в парк $35/машина (действует 7 дней).<br><b>Вечер</b> — возврат в Вашингтон.',
+    meta: ['$35 вход', '~5 ч дороги суммарно'],
+  },
+  {
+    day: 'Вт–Ср · 28–29 июля', title: 'Вашингтон → Москва',
+    time: 'Turkish Airlines · куплено', flight: true,
+    desc: '<b>13:20</b> вылет из Вашингтона (IAD), рейс <b>TK 188</b> (Boeing 787-9) → <b>06:10</b> прилёт в Стамбул (29.07).<br><b>Пересадка 1ч05м.</b><br><b>07:15</b> вылет из Стамбула, рейс <b>TK 413</b> (Airbus A330-300) → <b>11:05</b> прилёт в Москву (VKO).<br>Итого в пути 14ч45м.',
+    meta: ['80 306 ₽', 'Куплено', 'Прилёт 29.07, 11:05'],
+  },
+];
+
+const CONTACTS = [
+  {
+    title: 'Билеты на матчи',
+    list: [
+      { name: 'FIFA Resale Marketplace', detail: 'fifa.com/tickets — единственный официальный канал резейла', href: 'https://www.fifa.com/tickets' },
+      { name: 'Ticketmaster — World Cup 2026', detail: 'Официальный партнёр', href: 'https://www.ticketmaster.com/2026-world-cup-tickets/artist/4067734' },
+    ],
+  },
+  {
+    title: 'Транспорт',
+    list: [
+      { name: 'Turkish Airlines', detail: 'Москва-Атланта, Вашингтон-Москва', href: 'https://www.turkishairlines.com' },
+      { name: 'Frontier Airlines', detail: 'Атланта-Майами', href: 'https://www.flyfrontier.com' },
+      { name: 'jetBlue', detail: 'FLL-JFK · бронь KHDPMM', href: 'https://www.jetblue.com' },
+      { name: 'Amtrak', detail: 'Нью-Йорк → Вашингтон, Acela', href: 'https://www.amtrak.com' },
+      { name: 'Купибилет — поддержка', detail: 'Заказ 2563210241', href: 'https://kupibilet.ru' },
+    ],
+  },
+  {
+    title: 'Локальные службы США',
+    list: [
+      { name: 'Экстренные службы США', detail: '911', href: 'tel:911' },
+      { name: 'Посольство РФ в Вашингтоне', detail: 'Уточнить актуальный номер перед поездкой' },
+      { name: 'Консульство РФ в Хьюстоне (для юга США)', detail: 'Уточнить актуальный номер перед поездкой' },
+    ],
+  },
+  {
+    title: 'Местный транспорт',
+    list: [
+      { name: 'MARTA Атланта', detail: 'itsmarta.com', href: 'https://www.itsmarta.com' },
+      { name: 'Hard Rock Stadium → FLL — заказать трансфер заранее', detail: 'Uber Black / частный водитель, не рассчитывать на уличный Uber после матча' },
+      { name: 'Moynihan Train Hall / Penn Station', detail: 'Отправная точка Acela в Нью-Йорке', href: 'https://maps.google.com/?q=Moynihan+Train+Hall+New+York' },
+      { name: 'Union Station Washington DC', detail: 'Прибытие Acela', href: 'https://maps.google.com/?q=Union+Station+Washington+DC' },
+    ],
+  },
+];
+
+const DOCS = [
+  {
+    name: 'Georgy Chebotok', tag: 'США B1/B2 · 10 лет',
+    rows: [
+      { k: 'Паспорт', v: '772286189', mono: true },
+      { k: 'Виза США', v: 'B1/B2 multi-entry 10 лет', success: true },
+      { k: 'Выдана', v: '08.05.2026' },
+      { k: 'DS-160 / Application', v: 'AA00FHY0L1', mono: true },
+      { k: 'KITAS Индонезия', v: '26E28A560387 · E28A', mono: true },
+    ],
+  },
+  {
+    name: 'Москва → Атланта', tag: 'куплено',
+    rows: [
+      { k: 'Сегмент 1', v: 'TK-412 · VKO 00:30 → IST 04:30' },
+      { k: 'Пересадка', v: 'Стамбул, 3ч35м' },
+      { k: 'Сегмент 2', v: 'TK-131 · IST 08:05 → ATL 13:00' },
+      { k: 'Дата', v: '14 июля 2026' },
+      { k: 'Бронь (PNR)', v: 'SSM3WB', mono: true },
+      { k: 'Эл. билет', v: '2355892672022', mono: true },
+      { k: 'Заказ', v: 'C18861243273', mono: true },
+      { k: 'Цена', v: '106 401 ₽ (оплачено)', success: true },
+      { k: 'Ручная кладь', v: '1×8 кг, 55×40×23 см на пассажира' },
+      { k: 'Багаж', v: '2 места допустимо тарифом, не используется' },
+    ],
+  },
+  {
+    name: 'Отель Атланта', tag: 'оплачено',
+    rows: [
+      { k: 'Адрес', v: '300 Peachtree Street NE, Unit 24L' },
+      { k: 'Город', v: 'Атланта, Джорджия 30308, США' },
+      { k: 'Даты', v: '14–16.07.2026, 2 ночи' },
+      { k: 'Оплачено', v: '76 599 ¥ (~$474)', success: true },
+      { k: 'Платформа', v: 'Airbnb' },
+    ],
+  },
+  {
+    name: 'Жильё Нью-Йорк', tag: 'наличными',
+    rows: [
+      { k: 'Формат', v: 'У знакомого' },
+      { k: 'Район', v: '113-я улица, Манхэттен' },
+      { k: 'Даты', v: '19–24.07.2026, 5 ночей' },
+      { k: 'Ставка', v: '$200/ночь' },
+      { k: 'Итого', v: '$1 000, наличными', warn: true },
+    ],
+  },
+  {
+    name: 'Отель Aventura / Майами', tag: 'оплачено',
+    rows: [
+      { k: 'Адрес', v: '2910 Northeast 207th Street, Aventura, FL 33180' },
+      { k: 'Даты', v: '16–18.07.2026, 2 ночи' },
+      { k: 'Оплачено', v: '$442.85 (Bybit Card)', success: true },
+      { k: 'Платформа', v: 'Airbnb' },
+    ],
+  },
+  {
+    name: 'Атланта → Майами', tag: 'куплено',
+    rows: [
+      { k: 'Рейс', v: 'Frontier F9-3442 · ATL → MIA, прямой' },
+      { k: 'Дата / время', v: '16.07, 20:55 → 23:05' },
+      { k: 'В пути', v: '2ч10м' },
+      { k: 'Бронь / эл. билет', v: 'FIWTFQ', mono: true },
+      { k: 'Цена', v: '10 502.72 ₽ (оплачено)', success: true },
+      { k: 'Допуск в салон', v: 'Только личная вещь 45×20×35 см', danger: true },
+      { k: 'Ручная кладь', v: 'НЕ включена в этот тариф' },
+    ],
+  },
+  {
+    name: 'FLL → JFK', tag: 'куплено',
+    rows: [
+      { k: 'Рейс', v: 'jetBlue B6-1902' },
+      { k: 'Дата / время', v: '18.07 22:15 → 19.07 01:18' },
+      { k: 'В пути', v: '3ч03м' },
+      { k: 'Заказ Купибилет', v: '2563210241', mono: true },
+      { k: 'Бронь', v: 'KHDPMM', mono: true },
+      { k: '№ билета', v: 'KHDPMM-0', mono: true },
+      { k: 'Цена', v: '9 057 ₽ (оплачено)', success: true },
+      { k: 'Багаж', v: 'Без багажа' },
+    ],
+  },
+  {
+    name: 'Нью-Йорк → Вашингтон', tag: 'не куплено',
+    rows: [
+      { k: 'Транспорт', v: 'Amtrak Acela' },
+      { k: 'Дата', v: '24 июля 2026, ~09:35-10:00' },
+      { k: 'Отправление', v: 'Moynihan Train Hall / Penn Station, NYC' },
+      { k: 'Прибытие', v: 'Union Station, Washington DC, ~12:30-13:00' },
+      { k: 'В пути', v: '~2ч45м–3ч10м' },
+      { k: 'Далее', v: 'Uber до Джорджтауна, 30-45 мин' },
+      { k: 'Встреча', v: '14:00, 3350 M Street NW', warn: true },
+      { k: 'Цена', v: '~$150–200 (уточнить)', warn: true },
+    ],
+  },
+  {
+    name: 'Вашингтон → Москва', tag: 'куплено',
+    rows: [
+      { k: 'Сегмент 1', v: 'TK 188 · IAD 13:20 → IST 06:10 (29.07)' },
+      { k: 'Пересадка', v: 'Стамбул, 1ч05м' },
+      { k: 'Сегмент 2', v: 'TK 413 · IST 07:15 → VKO 11:05' },
+      { k: 'Дата вылета', v: '28.07.2026' },
+      { k: 'Дата прилёта', v: '29.07.2026' },
+      { k: 'В пути', v: '14ч45м' },
+      { k: 'Самолёты', v: 'Boeing 787-9 / Airbus A330-300' },
+      { k: 'Цена', v: '80 306 ₽ (оплачено)', success: true },
+      { k: 'Ручная кладь', v: '1×8 кг, 55×40×23 см' },
+      { k: 'Багаж', v: '2 места включено, не используется' },
+    ],
+  },
+  {
+    name: 'Билет на полуфинал', tag: 'оплачено',
+    rows: [
+      { k: 'Матч', v: 'M102 · Winner 99 vs Winner 100' },
+      { k: 'Дата / время', v: '15.07.2026, 15:00' },
+      { k: 'Стадион', v: 'Mercedes-Benz Stadium, Атланта' },
+      { k: 'Блок', v: '322' },
+      { k: 'Ряд', v: '17' },
+      { k: 'Билетов', v: '1' },
+      { k: '№ билета', v: '10010428183', mono: true },
+      { k: 'Цена', v: '345 240 ₽ (~$4 210)', success: true },
+      { k: 'Приложение', v: 'FWC2026 Mobile Tickets App — активировать заранее' },
+    ],
+  },
+];
+
+const BUDGET = {
+  rate: 82,
+  limit: 12195, // 1 000 000 ₽ по курсу 82 ₽/$
+  limitRub: 1000000,
+  resources: [
+    { name: 'Bybit Card', note: 'Текущий баланс после оплаты отелей Атланты и Майами', usd: 2870 },
+    { name: 'Наличные (кэш)', note: 'При себе — покрывает жильё в Нью-Йорке ($1000) и текущие расходы', usd: 1500 },
+    { name: 'RUB резерв', note: 'Остаток бюджета сверх карты и кэша, хранится в рублях, конвертация по необходимости через P2P', usd: 1162 },
+    { name: 'Bybit Crypto Wallet', note: 'Инструмент для P2P конвертации RUB → USDT при пополнении карты' },
+    { name: 'Российская банковская карта', note: 'Резерв на крайний случай' },
+    { name: 'Киргизская карта', note: 'Малый резерв' },
+  ],
+  flights: [
+    { name: 'Москва → Атланта', rub: 106401, status: 'оплачено' },
+    { name: 'Атланта → Майами', rub: 10503, status: 'оплачено' },
+    { name: 'FLL → JFK', rub: 9057, status: 'оплачено' },
+    { name: 'Вашингтон → Москва', rub: 80306, status: 'оплачено' },
+  ],
+  accommodation: [
+    { name: 'Атланта, 2 ночи', usd: 474, status: 'оплачено' },
+    { name: 'Aventura FL, 2 ночи', usd: 443, status: 'оплачено' },
+    { name: 'Нью-Йорк, 5 ночей (у знакомого, наличными на месте)', usd: 1000, status: 'не оплачено' },
+    { name: 'Вашингтон, 4 ночи (24-28.07, не забронировано)', usd: 700, status: 'не оплачено' },
+  ],
+  tickets: [
+    { name: 'Билет на полуфинал (Атланта)', rub: 345240, status: 'оплачено' },
+  ],
+  other: [
+    { name: 'Аренда авто Вашингтон, 2 дня (Great Falls + Shenandoah)', usd: 195 },
+    { name: 'Входы в парки (Great Falls $20 + Shenandoah $35)', usd: 55 },
+    { name: 'Amtrak Acela, Нью-Йорк → Вашингтон', usd: 175 },
+    { name: 'Местный транспорт / трансферы', usd: 500 },
+    { name: 'Питание, 13 дней × $45', usd: 585 },
+    { name: 'Активности (аквариум, музеи и т.д.)', usd: 250 },
+  ],
+};
+
+function renderChecklist() {
+  const container = document.getElementById('sections');
+  container.innerHTML = SECTIONS.map(sec => {
+    const total = sec.items.length;
+    const done = sec.items.filter(i => state[`${sec.id}.${i.id}`]).length;
+    const isFullyDone = done === total;
+    const items = sec.items.map(item => {
+      const checked = !!state[`${sec.id}.${item.id}`];
+      const badgeHtml = item.badge ? `<span class="badge ${item.badge}">${item.badge === 'hot' ? '!' : '⚠'}</span>` : '';
+      return `
+        <div class="item ${checked ? 'checked' : ''}">
+          <div class="check" onclick="toggleItem('${sec.id}', '${item.id}')">${checkSvg}</div>
+          <div class="item-content">
+            <div class="item-text">${item.text}${badgeHtml}</div>
+            ${item.note ? `<div class="item-note">${item.note}</div>` : ''}
+          </div>
+        </div>
+      `;
+    }).join('');
+    const collapsedClass = isFullyDone ? 'collapsed' : '';
+    const stateClass = isFullyDone ? 'done' : (sec.hot ? 'hot' : '');
+    return `
+      <div class="section ${stateClass} ${collapsedClass}" id="sec-${sec.id}">
+        <div class="sec-head" onclick="this.parentElement.classList.toggle('collapsed')">
+          <div class="sec-icon"></div>
+          <div style="flex:1; min-width:0">
+            <div class="sec-title">${sec.title}</div>
+            <div class="sec-time">${sec.time}</div>
+          </div>
+          <div class="sec-count">${done}/${total}</div>
+          <svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        </div>
+        <div class="sec-body">${items}</div>
+      </div>
+    `;
+  }).join('');
+  patchLinks(container);
+}
+
+function renderTimeline() {
+  const container = document.getElementById('timeline');
+  container.innerHTML = TIMELINE.map(it => {
+    const cls = it.flight ? 'flight' : (it.tbd ? 'tbd' : (it.hot ? 'hot' : ''));
+    const meta = it.meta ? `<div class="tl-meta">${it.meta.map(m => `<span class="meta-chip ${/₽|\$/.test(m) ? 'code' : ''} ${/не куплен|TBD|не проверен/i.test(m) ? 'warn' : ''}">${m}</span>`).join('')}</div>` : '';
+    return `
+      <div class="tl-item ${cls}">
+        <div class="tl-day">${it.day}</div>
+        <div class="tl-title">${it.title}</div>
+        <div class="tl-time">${it.time}</div>
+        <div class="tl-desc">${it.desc}</div>
+        ${meta}
+      </div>
+    `;
+  }).join('');
+  patchLinks(container);
+}
+
+function patchLinks(root) {
+  if (!root) return;
+  const links = root.querySelectorAll('a[href]');
+  links.forEach(a => {
+    const href = a.getAttribute('href');
+    if (!href) return;
+    const isHttp = /^https?:\/\//i.test(href);
+    if (isHttp) { a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener noreferrer'); }
+  });
+}
+
+function renderContacts() {
+  const container = document.getElementById('contacts');
+  container.innerHTML = CONTACTS.map(group => {
+    const items = group.list.map(c => {
+      const isLink = !!c.href;
+      const tag = isLink ? 'a' : 'div';
+      const hrefAttr = isLink ? `href="${c.href}"` : '';
+      const action = isLink ? `<span class="c-action">${c.href.startsWith('tel:') ? 'Позвонить' : 'Открыть'}</span>` : '';
+      return `
+        <${tag} ${hrefAttr} class="contact-card">
+          <div class="c-info">
+            <div class="c-name">${c.name}</div>
+            <div class="c-detail">${c.detail}</div>
+          </div>
+          ${action}
+        </${tag}>
+      `;
+    }).join('');
+    return `<div class="contact-group"><div class="group-title">${group.title}</div>${items}</div>`;
+  }).join('');
+  patchLinks(container);
+}
+
+function renderDocs() {
+  const container = document.getElementById('docs');
+  container.innerHTML = DOCS.map(doc => {
+    const rows = doc.rows.map(r => {
+      const cls = r.warn ? 'warn' : r.danger ? 'danger' : r.success ? 'success' : '';
+      const monoCls = r.mono ? 'mono' : '';
+      return `<div class="doc-row ${cls}"><div class="k">${r.k}</div><div class="v ${monoCls}">${r.v}</div></div>`;
+    }).join('');
+    const tagCls = /не куплено|не оплачено/i.test(doc.tag) ? 'warn' : '';
+    return `
+      <div class="doc-card">
+        <div class="doc-head">
+          <div class="doc-name">${doc.name}</div>
+          <span class="doc-tag ${tagCls}">${doc.tag}</span>
+        </div>
+        ${rows}
+      </div>
+    `;
+  }).join('');
+}
+
+function renderBudget() {
+  const container = document.getElementById('budget');
+  const rate = BUDGET.rate;
+
+  const allItems = [
+    ...BUDGET.flights.map(x => ({ ...x, cat: 'Перелёт' })),
+    ...BUDGET.tickets.map(x => ({ ...x, cat: 'Билет' })),
+    ...BUDGET.accommodation.map(x => ({ ...x, rub: Math.round(x.usd * rate), cat: 'Проживание' })),
+    ...BUDGET.other.map(x => ({ ...x, rub: Math.round(x.usd * rate), status: x.status || 'план', cat: 'Прочее' })),
+  ];
+
+  const totalBudgetRub = BUDGET.limitRub;
+  const spentRub = allItems.filter(x => x.status === 'оплачено').reduce((s, x) => s + x.rub, 0);
+  const remainingRub = totalBudgetRub - spentRub;
+  const upcomingRub = allItems.filter(x => x.status !== 'оплачено').reduce((s, x) => s + x.rub, 0);
+  const bufferRub = remainingRub - upcomingRub;
+
+  const toUsd = r => Math.round(r / rate);
+
+  container.innerHTML = `
+    <div class="budget-hero">
+      <div class="budget-hero-title">Бюджет поездки</div>
+      <div class="budget-hero-row" style="margin-top:4px">
+        <div class="budget-stat"><div class="budget-stat-label">Общий бюджет</div><div class="budget-stat-value">${totalBudgetRub.toLocaleString('en-US')} ₽</div><div class="value-sub">~$${toUsd(totalBudgetRub)}</div></div>
+        <div class="budget-stat"><div class="budget-stat-label">Потрачено</div><div class="budget-stat-value danger">${spentRub.toLocaleString('en-US')} ₽</div><div class="value-sub">~$${toUsd(spentRub)}</div></div>
+        <div class="budget-stat"><div class="budget-stat-label">Остаток</div><div class="budget-stat-value success">${remainingRub.toLocaleString('en-US')} ₽</div><div class="value-sub">~$${toUsd(remainingRub)}</div></div>
+        <div class="budget-stat"><div class="budget-stat-label">Запас после всех трат</div><div class="budget-stat-value ${bufferRub < 0 ? 'danger' : 'accent'}">${bufferRub.toLocaleString('en-US')} ₽</div><div class="value-sub">~$${toUsd(bufferRub)}</div></div>
+      </div>
+      <div class="progress-bar"><div class="progress-fill ${spentRub/totalBudgetRub > 0.85 ? 'warn' : ''}" style="width:${Math.min(100, Math.round(spentRub/totalBudgetRub*100))}%"></div></div>
+    </div>
+
+    <div class="budget-card">
+      <div class="budget-card-title"><span>💳 Распределение по счетам</span></div>
+      ${BUDGET.resources.map(r => `<div class="budget-row"><div><div class="label">${r.name}</div><div class="label-sub">${r.note}</div></div>${r.usd ? `<div class="value">$${r.usd.toLocaleString('en-US')}</div>` : ''}</div>`).join('')}
+      <div class="budget-note">Баланс Bybit Card указан на момент до покупки билета Вашингтон → Москва (80 306 ₽) — уточни актуальный баланс.</div>
+    </div>
+
+    <div class="budget-card">
+      <div class="budget-card-title"><span>✈️ Перелёты</span><span class="budget-card-total">${BUDGET.flights.reduce((s,f)=>s+f.rub,0).toLocaleString('en-US')} ₽</span></div>
+      ${BUDGET.flights.map(f => `<div class="budget-row"><div><div class="label">${f.name}</div><div class="label-sub">${f.status}</div></div><div class="value">${f.rub.toLocaleString('en-US')} ₽<div class="value-sub">~$${toUsd(f.rub)}</div></div></div>`).join('')}
+    </div>
+
+    <div class="budget-card">
+      <div class="budget-card-title"><span>🎟️ Билеты на матчи</span><span class="budget-card-total">${BUDGET.tickets.reduce((s,t)=>s+t.rub,0).toLocaleString('en-US')} ₽</span></div>
+      ${BUDGET.tickets.map(t => `<div class="budget-row"><div><div class="label">${t.name}</div><div class="label-sub">${t.status}</div></div><div class="value">${t.rub.toLocaleString('en-US')} ₽<div class="value-sub">~$${toUsd(t.rub)}</div></div></div>`).join('')}
+      <div class="budget-note">Билет за 3-е место (Майами) — подарок, не входит в расчёт.</div>
+    </div>
+
+    <div class="budget-card">
+      <div class="budget-card-title"><span>🏨 Проживание</span><span class="budget-card-total">$${BUDGET.accommodation.reduce((s,a)=>s+a.usd,0)}</span></div>
+      ${BUDGET.accommodation.map(a => `<div class="budget-row"><div><div class="label">${a.name}</div><div class="label-sub">${a.status}</div></div><div class="value">$${a.usd}<div class="value-sub">~${a.usd*rate|0} ₽</div></div></div>`).join('')}
+    </div>
+
+    <div class="budget-card">
+      <div class="budget-card-title"><span>🎯 Транспорт, еда, активности</span><span class="budget-card-total">$${BUDGET.other.reduce((s,o)=>s+o.usd,0)}</span></div>
+      ${BUDGET.other.map(o => `<div class="budget-row"><div class="label">${o.name}</div><div class="value">$${o.usd}<div class="value-sub">~${o.usd*rate|0} ₽</div></div></div>`).join('')}
+    </div>
+  `;
+  patchLinks(container);
+}
+
+let state = {};
+function loadState() {
+  try { const raw = localStorage.getItem('wc26-checklist-state'); if (raw) state = JSON.parse(raw); }
+  catch (e) { state = {}; }
+}
+function saveState() {
+  try { localStorage.setItem('wc26-checklist-state', JSON.stringify(state)); } catch (e) {}
+}
+function toggleItem(secId, itemId) {
+  const key = `${secId}.${itemId}`;
+  state[key] = !state[key];
+  saveState();
+  renderChecklist();
+  updateProgress();
+}
+function resetAll() {
+  if (!confirm('Сбросить все отметки?')) return;
+  state = {};
+  saveState();
+  renderChecklist();
+  updateProgress();
+}
+function toggleAll(collapse) {
+  document.querySelectorAll('#sections .section').forEach(s => { if (collapse) s.classList.add('collapsed'); else s.classList.remove('collapsed'); });
+}
+function jumpToCurrent() {
+  for (const sec of SECTIONS) {
+    const total = sec.items.length;
+    const done = sec.items.filter(i => state[`${sec.id}.${i.id}`]).length;
+    if (done < total) {
+      const el = document.getElementById(`sec-${sec.id}`);
+      if (el) { el.classList.remove('collapsed'); el.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+      break;
+    }
+  }
+}
+function updateProgress() {
+  let total = 0, done = 0, hasHot = false;
+  for (const sec of SECTIONS) {
+    total += sec.items.length;
+    done += sec.items.filter(i => state[`${sec.id}.${i.id}`]).length;
+    if (sec.hot && !sec.items.every(i => state[`${sec.id}.${i.id}`])) hasHot = true;
+  }
+  const pct = total ? Math.round((done / total) * 100) : 0;
+  document.getElementById('bar').style.width = pct + '%';
+  document.getElementById('progress-text').textContent = `${done} из ${total}`;
+  document.getElementById('percent').textContent = pct + '%';
+  const tabChecklist = document.querySelector('[data-tab="checklist"]');
+  if (hasHot) tabChecklist.classList.add('has-hot'); else tabChecklist.classList.remove('has-hot');
+}
+function setupTabs() {
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  });
+}
+
+loadState();
+renderChecklist();
+renderTimeline();
+renderContacts();
+renderDocs();
+renderBudget();
+updateProgress();
+setupTabs();
+</script>
+</body>
+</html>
